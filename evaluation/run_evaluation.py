@@ -10,6 +10,7 @@ import tarfile
 import traceback
 import uuid
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import suppress
 from pathlib import Path
 from typing import Any
 
@@ -324,10 +325,17 @@ class BenchmarkEvaluation:
             print(traceback.format_exc())
 
         finally:
-            networks = list(container.attrs.get("NetworkSettings", {}).get("Networks", {}))
+            with suppress(Exception):
+                container.reload()
+            networks = list(
+                container.attrs.get("NetworkSettings", {}).get("Networks", {})
+            )
             try:
                 container.stop()
-                container.remove()
+            except Exception:
+                traceback.print_exc()
+            try:
+                container.remove(force=True)
             except Exception:
                 traceback.print_exc()
             for network_name in networks:
